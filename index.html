@@ -10,41 +10,72 @@
     <p>参考文献：文献</p>
 </body>
 </html>
-</html>
 <html>
 <head>
-    <title>Leaflet with Gaode Map and GeoJSON</title>
+    <title>Leaflet with GeoJSON</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 引入Leaflet的CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <!-- 确保页面不会因为默认的边距和填充而出现滚动条 -->
+    <!-- 隐藏Leaflet图标和文字 -->
     <style>
         #mapid { height: 600px; }
+        .leaflet-control-attribution {
+            display: none;
+        }
+        /* 设置地图的深色底图样式 */
+        .leaflet-container {
+            background: #767272;
+        }
     </style>
 </head>
 <body>
     <div id="mapid"></div>
     <!-- 引入Leaflet的JavaScript -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script> 
     <script>
         // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为3
         var map = L.map('mapid').setView([0, 0], 3);
 
-        // 使用高德地图作为底图
-        var gaodeLayer = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}&lang=zh_cn&tk=你的高德地图API密钥', {
-            subdomains: ['1', '2', '3', '4'],
-            attribution: '高德地图'
-        }).addTo(map);
-
-        // 加载GeoJSON数据
+        // 加载GeoJSON数据作为底图
         // 请确保GeoJSON文件路径正确，并且服务器可以访问该文件
         // 如果是在本地测试，建议将GeoJSON文件放在与HTML文件相同的目录下
-        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson') // 修改为你的文件URL
+        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')  // 修改为你的world.zh.geojson文件URL
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
                 L.geoJSON(data, {
+                    style: function (feature) {
+                        return {
+                            color: "#000000", // 边界颜色
+                            weight: 1,
+                            opacity: 1,
+                            fillColor: '#000000', // 填充颜色
+                            fillOpacity: 1 // 完全不透明
+                        };
+                    }
+                }).addTo(map);
+            })
+            .catch(error => {
+                console.error('Error loading GeoJSON:', error);
+            });
+
+        // 加载其他GeoJSON数据
+        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson')
+            .then(response => response.json())
+            .then(data => {
+                // 创建GeoJSON图层并添加到地图
+                L.geoJSON(data, {
+                    pointToLayer: function (feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 8,
+                            fillColor: "#007bff", // 浅蓝色
+                            color: "#007bff", // 边界颜色
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    },
                     onEachFeature: function (feature, layer) {
                         // 为每个特征添加弹出窗口
                         if (feature.properties) {

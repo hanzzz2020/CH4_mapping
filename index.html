@@ -9,7 +9,6 @@
     <h2>甲烷浓度分布</h2>
     <p>参考文献：文献</p>
 </body>
-</html>
 <html>
 <head>
     <title>Leaflet with GeoJSON</title>
@@ -32,15 +31,13 @@
 <body>
     <div id="mapid"></div>
     <!-- 引入Leaflet的JavaScript -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script> 
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>   
     <script>
         // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为3
         var map = L.map('mapid').setView([0, 0], 3);
 
-        // 加载GeoJSON数据作为底图
-        // 请确保GeoJSON文件路径正确，并且服务器可以访问该文件
-        // 如果是在本地测试，建议将GeoJSON文件放在与HTML文件相同的目录下
-        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')  // 修改为你的world.zh.geojson文件URL
+        // 加载world.zh.geojson作为底图
+        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
@@ -57,20 +54,22 @@
                 }).addTo(map);
             })
             .catch(error => {
-                console.error('Error loading GeoJSON:', error);
+                console.error('Error loading world.zh.geojson:', error);
             });
-
-        // 加载其他GeoJSON数据
+            
+        // 加载InlandWater_data.geojson点数据
         fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson')
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
                 L.geoJSON(data, {
                     pointToLayer: function (feature, latlng) {
+                        var fluxMean = feature.properties.Flux_Mean;
+                        var color = getColor(fluxMean);
                         return L.circleMarker(latlng, {
                             radius: 8,
-                            fillColor: "#007bff", // 浅蓝色
-                            color: "#007bff", // 边界颜色
+                            fillColor: color,
+                            color: color,
                             weight: 1,
                             opacity: 1,
                             fillOpacity: 0.8
@@ -89,8 +88,44 @@
                 }).addTo(map);
             })
             .catch(error => {
-                console.error('Error loading GeoJSON:', error);
+                console.error('Error loading InlandWater_data.geojson:', error);
             });
+
+        // 根据甲烷浓度值返回颜色
+        function getColor(fluxMean) {
+            var min = 0; // 最小浓度值
+            var max = 100; // 最大浓度值，根据实际情况调整
+            var ratio = (fluxMean - min) / (max - min);
+            var r, g, b;
+            if (ratio < 0.001) {
+                // Red to Orange
+                r = 255;
+                g = Math.round(255 * (ratio / 0.2));
+                b = 0;
+            } else if (ratio < 0.005) {
+                // Orange to Yellow
+                r = 255;
+                g = 255;
+                b = Math.round(255 * ((ratio - 0.2) / 0.2));
+            } else if (ratio < 0.1) {
+                // Yellow to Green
+                r = Math.round(255 - (255 * ((ratio - 0.4) / 0.2)));
+                g = 255;
+                b = 0;
+            } else if (ratio < 0.5) {
+                // Green to Blue
+                r = 0;
+                g = Math.round(255 - (255 * ((ratio - 0.6) / 0.2)));
+                b = Math.round(255 * ((ratio - 0.6) / 0.2));
+            } else {
+                // Blue
+                r = 0;
+                g = 0;
+                b = 255;
+            }
+            return `rgb(${r},${g},${b})`;
+        }
+
     </script>
 </body>
 </html>

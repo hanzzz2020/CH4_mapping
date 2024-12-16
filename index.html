@@ -9,6 +9,7 @@
     <h2>甲烷浓度分布</h2>
     <p>参考文献：文献</p>
 </body>
+
 <html>
 <head>
     <title>Leaflet with GeoJSON</title>
@@ -31,17 +32,17 @@
 <body>
     <div id="mapid"></div>
     <!-- 引入Leaflet的JavaScript -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>   
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>    
     <script>
-        // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为3
-        var map = L.map('mapid').setView([0, 0], 3);
+        // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为4
+        var map = L.map('mapid').setView([30, 0], 2);
 
         // 加载world.zh.geojson作为底图
         fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
-                L.geoJSON(data, {
+                var worldLayer = L.geoJSON(data, {
                     style: function (feature) {
                         return {
                             color: "#000000", // 边界颜色
@@ -62,7 +63,7 @@
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
-                L.geoJSON(data, {
+                var inlandWaterLayer = L.geoJSON(data, {
                     pointToLayer: function (feature, latlng) {
                         var fluxMean = feature.properties.Flux_Mean;
                         var color = getColor(fluxMean);
@@ -86,6 +87,11 @@
                         }
                     }
                 }).addTo(map);
+
+                // 确保点数据图层在面数据图层之上
+                map.addLayer(inlandWaterLayer);
+                map.removeLayer(worldLayer);
+                map.addLayer(worldLayer);
             })
             .catch(error => {
                 console.error('Error loading InlandWater_data.geojson:', error);
@@ -118,10 +124,10 @@
                 g = Math.round(255 - (255 * ((ratio - 0.6) / 0.2)));
                 b = Math.round(255 * ((ratio - 0.6) / 0.2));
             } else {
-                // Blue
-                r = 0;
-                g = 0;
-                b = 255;
+                // Light Blue
+                r = 0; // Light Blue shade
+                g = 122; // Light Blue shade
+                b = 255; // Light Blue shade
             }
             return `rgb(${r},${g},${b})`;
         }

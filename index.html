@@ -9,7 +9,6 @@
     <h2>甲烷浓度分布</h2>
     <p>参考文献：文献</p>
 </body>
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -33,13 +32,13 @@
 <body>
     <div id="mapid"></div>
     <!-- 引入Leaflet的JavaScript -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>      
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>       
     <script>
         // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为2
         var map = L.map('mapid').setView([30, 0], 2);
 
         // 加载world.zh.geojson作为底图
-        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')   
+        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')    
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
@@ -60,22 +59,24 @@
             });
             
         // 加载InlandWater_data.geojson点数据
-        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson')   
+        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson')    
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
                 var inlandWaterLayer = L.geoJSON(data, {
                     pointToLayer: function (feature, latlng) {
-                        var fluxMean = feature.properties.Flux_Mean;
-                        var color = getColor(fluxMean);
-                        return L.circleMarker(latlng, {
-                            radius: 6,
-                            fillColor: color,
-                            color: color,
-                            weight: 1,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        });
+                        var fluxMean = feature.properties.Concen_Mean;
+                        if (fluxMean != undefined && fluxMean != null && fluxMean != '' && fluxMean != 'NA') {
+                            var color = getColor(fluxMean);
+                            return L.circleMarker(latlng, {
+                                radius: 6,
+                                fillColor: color,
+                                color: color,
+                                weight: 1,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            });
+                        }
                     },
                     onEachFeature: function (feature, layer) {
                         // 为每个特征添加悬停和点击事件
@@ -107,36 +108,41 @@
         // 根据甲烷浓度值返回颜色
         function getColor(fluxMean) {
             var min = 0; // 最小浓度值
-            var max = 100; // 最大浓度值，根据实际情况调整
+            var max = 1070.40; // 最大浓度值，根据实际情况调整
             var ratio = (fluxMean - min) / (max - min);
             var r, g, b;
-            if (ratio < 0.001) {
-                // Red to Orange
-                r = 255;
-                g = Math.round(255 * (ratio / 0.2));
-                b = 0;
+            if (ratio < 0.0001) {
+            // Red to Orange
+            r = 255;
+            g = Math.round(255 * (ratio / 0.2));
+            b = 0;
+            return `rgb(${r},${g},${b})`;
             } else if (ratio < 0.005) {
                 // Orange to Yellow
                 r = 255;
                 g = 255;
                 b = Math.round(255 * ((ratio - 0.2) / 0.2));
-            } else if (ratio < 0.1) {
+                return `rgb(${r},${g},${b})`;
+            } else if (ratio < 0.01) {
                 // Yellow to Green
                 r = Math.round(255 - (255 * ((ratio - 0.4) / 0.2)));
                 g = 255;
                 b = 0;
-            } else if (ratio < 0.5) {
+                return `rgb(${r},${g},${b})`;
+            } else if (ratio < 0.1) {
                 // Green to Blue
                 r = 0;
                 g = Math.round(255 - (255 * ((ratio - 0.6) / 0.2)));
                 b = Math.round(255 * ((ratio - 0.6) / 0.2));
+                return `rgb(${r},${g},${b})`;
             } else {
                 // Light Blue
                 r = 0; // Light Blue shade
                 g = 122; // Light Blue shade
                 b = 255; // Light Blue shade
+                return `rgb(${r},${g},${b})`;
             }
-            return `rgb(${r},${g},${b})`;
+           
         }
 
     </script>

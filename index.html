@@ -10,6 +10,7 @@
     <p>参考文献：文献</p>
 </body>
 
+<!DOCTYPE html>
 <html>
 <head>
     <title>Leaflet with GeoJSON</title>
@@ -32,13 +33,13 @@
 <body>
     <div id="mapid"></div>
     <!-- 引入Leaflet的JavaScript -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>      
     <script>
-        // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为4
+        // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为2
         var map = L.map('mapid').setView([30, 0], 2);
 
         // 加载world.zh.geojson作为底图
-        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')
+        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')   
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
@@ -59,7 +60,7 @@
             });
             
         // 加载InlandWater_data.geojson点数据
-        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson')
+        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson')   
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
@@ -68,7 +69,7 @@
                         var fluxMean = feature.properties.Flux_Mean;
                         var color = getColor(fluxMean);
                         return L.circleMarker(latlng, {
-                            radius: 8,
+                            radius: 6,
                             fillColor: color,
                             color: color,
                             weight: 1,
@@ -77,13 +78,19 @@
                         });
                     },
                     onEachFeature: function (feature, layer) {
-                        // 为每个特征添加弹出窗口
+                        // 为每个特征添加悬停和点击事件
                         if (feature.properties) {
-                            var popupContent = `<strong>Properties:</strong><br>`;
-                            for (var key in feature.properties) {
-                                popupContent += `${key}: ${feature.properties[key]}<br>`;
-                            }
-                            layer.bindPopup(popupContent);
+                            var tooltipContent = `Concen Mean: ${feature.properties.Concen_Mean}<br>Concen Range: ${feature.properties.Concen_Range}`;
+                            var popupContent = `Concen Mean: ${feature.properties.Concen_Mean}<br>Concen Range: ${feature.properties.Concen_Range}`;
+                            
+                            layer.bindTooltip(tooltipContent, { permanent: false, sticky: false });
+                            layer.on('click', function(e) {
+                                if (e.target._popup) {
+                                    e.target.unbindPopup();
+                                } else {
+                                    e.target.bindPopup(popupContent).openPopup();
+                                }
+                            });
                         }
                     }
                 }).addTo(map);

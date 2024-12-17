@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <h1>内陆水体甲烷地图</h1>
     <h2>甲烷浓度分布</h2>
     <p>参考文献：文献</p>
 </body>
@@ -19,36 +20,59 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <!-- 隐藏Leaflet图标和文字 -->
     <style>
-        #mapid { height: 600px; }
+        #mapid { 
+            height: 600px; 
+            width: 80%; /* 减小宽度为原来的80% */
+            margin: 0 auto; /* 居中显示 */
+        }
         .leaflet-control-attribution {
             display: none;
         }
         /* 设置地图的深色底图样式 */
         .leaflet-container {
-            background: #767272;
+            background: #a5a8a4;
+        }
+        /* 自定义弹出框样式 */
+        .custom-popup {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        /* 自定义右下角详情框样式 */
+        .details {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            display: none; /* 默认不显示 */
         }
     </style>
 </head>
 <body>
     <div id="mapid"></div>
     <!-- 引入Leaflet的JavaScript -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>       
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>           
     <script>
         // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为2
         var map = L.map('mapid').setView([30, 0], 2);
 
+        // 限制地图的缩放范围
+        map.setMinZoom(1); // 设置最小缩放级别
+        map.setMaxZoom(10); // 设置最大缩放级别
+
         // 加载world.zh.geojson作为底图
-        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson')    
+        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson') 
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
                 var worldLayer = L.geoJSON(data, {
                     style: function (feature) {
                         return {
-                            color: "#000000", // 边界颜色
+                            color: "#222222", // 边界颜色
                             weight: 1,
                             opacity: 1,
-                            fillColor: '#000000', // 填充颜色
+                            fillColor: '#222222', // 填充颜色
                             fillOpacity: 1 // 完全不透明
                         };
                     }
@@ -59,7 +83,7 @@
             });
             
         // 加载InlandWater_data.geojson点数据
-        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson')    
+        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson') 
             .then(response => response.json())
             .then(data => {
                 // 创建GeoJSON图层并添加到地图
@@ -68,8 +92,9 @@
                         var fluxMean = feature.properties.Concen_Mean;
                         if (fluxMean != undefined && fluxMean != null && fluxMean != '' && fluxMean != 'NA') {
                             var color = getColor(fluxMean);
+                            var radius = getRadius(fluxMean);
                             return L.circleMarker(latlng, {
-                                radius: 6,
+                                radius: radius,
                                 fillColor: color,
                                 color: color,
                                 weight: 1,
@@ -79,17 +104,27 @@
                         }
                     },
                     onEachFeature: function (feature, layer) {
-                        // 为每个特征添加悬停和点击事件
+                        // 为每个特征添加点击事件
                         if (feature.properties) {
-                            var tooltipContent = `Concen Mean: ${feature.properties.Concen_Mean}<br>Concen Range: ${feature.properties.Concen_Range}`;
-                            var popupContent = `Concen Mean: ${feature.properties.Concen_Mean}<br>Concen Range: ${feature.properties.Concen_Range}`;
+                            var popupContent = `均值: ${feature.properties.Concen_Mean}<br>范围: ${feature.properties.Concen_Range}`;
                             
-                            layer.bindTooltip(tooltipContent, { permanent: false, sticky: false });
                             layer.on('click', function(e) {
                                 if (e.target._popup) {
                                     e.target.unbindPopup();
+                                    detailsControl.getContainer().style.display = 'none'; // 隐藏详情框
                                 } else {
-                                    e.target.bindPopup(popupContent).openPopup();
+                                    e.target.bindPopup(popupContent, { closeButton: false }).openPopup(); // 去除关闭按钮
+                                    
+                                    // 显示右下角详情框
+                                    var detailsContent = `
+                                        <p>单位：μmol / L</p>
+                                        <p>坐标：${feature.properties.Coordinates}</p>
+                                        <p>时间：${feature.properties['Temporal coverage']}</p>
+                                        <p>位置：${feature.properties.Location}</p>
+                                        <p>参考文献：${feature.properties.Citation}</p>
+                                    `;
+                                    detailsControl.setContent(detailsContent);
+                                    detailsControl.getContainer().style.display = 'block'; // 显示详情框
                                 }
                             });
                         }
@@ -109,42 +144,47 @@
         function getColor(fluxMean) {
             var min = 0; // 最小浓度值
             var max = 1070.40; // 最大浓度值，根据实际情况调整
-            var ratio = (fluxMean - min) / (max - min);
-            var r, g, b;
-            if (ratio < 0.0001) {
-            // Red to Orange
-            r = 255;
-            g = Math.round(255 * (ratio / 0.2));
-            b = 0;
-            return `rgb(${r},${g},${b})`;
-            } else if (ratio < 0.005) {
-                // Orange to Yellow
-                r = 255;
-                g = 255;
-                b = Math.round(255 * ((ratio - 0.2) / 0.2));
-                return `rgb(${r},${g},${b})`;
-            } else if (ratio < 0.01) {
-                // Yellow to Green
-                r = Math.round(255 - (255 * ((ratio - 0.4) / 0.2)));
-                g = 255;
-                b = 0;
-                return `rgb(${r},${g},${b})`;
-            } else if (ratio < 0.1) {
-                // Green to Blue
-                r = 0;
-                g = Math.round(255 - (255 * ((ratio - 0.6) / 0.2)));
-                b = Math.round(255 * ((ratio - 0.6) / 0.2));
-                return `rgb(${r},${g},${b})`;
-            } else {
-                // Light Blue
-                r = 0; // Light Blue shade
-                g = 122; // Light Blue shade
-                b = 255; // Light Blue shade
-                return `rgb(${r},${g},${b})`;
-            }
-           
+            var ratio = (fluxMean - min) / (max - min)+0.2;
+            
+            return `rgba(50,193,234,${ratio})`;
+
         }
+
+        // 根据甲烷浓度值返回半径
+        function getRadius(fluxMean) {
+            var min = 0; // 最小浓度值
+            var max = 1070.40; // 最大浓度值，根据实际情况调整
+            var ratio = (fluxMean - min) / (max - min);
+            var radius = Math.round(5 + 10 * ratio); // 半径范围从5到15
+            return radius;
+        }
+
+        // 创建一个自定义控件
+        var detailsControl = L.control({position: 'bottomright'});
+        detailsControl.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'details');
+            div.innerHTML = '';
+            return div;
+        };
+        detailsControl.addTo(map);
+
+        // 方法来更新控件内容
+        detailsControl.setContent = function(content) {
+            this.getContainer().innerHTML = content;
+        };
 
     </script>
 </body>
 </html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h2>甲烷排放分布</h2>
+    <p>参考文献：文献</p>
+</body>

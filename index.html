@@ -3,14 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <title>Maps Layout</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .map-container {
+            height: 30%; /* 每个地图容器的高度 */
+            width: 100%; /* 容器宽度 */
+        }
+        /* 如果需要地图之间有间距，可以给.map-container添加margin-bottom属性 */
+        .map-container:not(:last-child) {
+            margin-bottom: 2%; /* 在最后一个容器之前添加间距 */
+        }
+    </style>
 </head>
 <body>
-    <h1>内陆水体甲烷地图</h1>
-    <h2>甲烷浓度分布</h2>
-    <p>参考文献：文献</p>
-</body>
-<!DOCTYPE html>
+    <div class="map-container">
+        <!DOCTYPE html>
 <html>
 <head>
     <title>Leaflet with GeoJSON</title>
@@ -175,13 +190,9 @@
     </script>
 </body>
 </html>
-
-
-<body>
-    <h2>甲烷排放分布</h2>
-    <p>参考文献：文献</p>
-</body>
-<!DOCTYPE html>
+    </div>
+    <div class="map-container">
+        <!DOCTYPE html>
 <html>
 <head>
     <title>Leaflet with GeoJSON</title>
@@ -345,5 +356,194 @@
         };
 
     </script>
+</body>
+</html>
+    </div>
+    <div class="map-container">
+        <!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet with GeoJSON</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 引入Leaflet的CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- 隐藏Leaflet图标和文字 -->
+    <style>
+        #mapid { 
+            height: 600px; 
+            width: 80%; /* 减小宽度为原来的80% */
+            margin: 0 auto; /* 居中显示 */
+        }
+        .leaflet-control-attribution {
+            display: none;
+        }
+        /* 设置地图的深色底图样式 */
+        .leaflet-container {
+            background: #9BCFFA;
+        }
+        /* 自定义弹出框样式 */
+        .custom-popup {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        /* 自定义右下角详情框样式 */
+        .details {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            display: none; /* 默认不显示 */
+        }
+    </style>
+</head>
+<body>
+    <div id="mapid"></div>
+    <!-- 引入Leaflet的JavaScript -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>           
+    <script>
+        // 创建地图实例，并设置视图到世界地图的中心点，缩放级别为2
+        var map = L.map('mapid').setView([30, 0], 2);
+
+        // 限制地图的缩放范围
+        map.setMinZoom(1); // 设置最小缩放级别
+        map.setMaxZoom(10); // 设置最大缩放级别
+
+        // 加载world.zh.geojson作为底图
+        fetch('https://hanzzz2020.github.io/CH4_mapping/world.zh.geojson') 
+            .then(response => response.json())
+            .then(data => {
+                // 创建GeoJSON图层并添加到地图
+                var worldLayer = L.geoJSON(data, {
+                    style: function (feature) {
+                        return {
+                            color: "#C8C1B3", // 边界颜色
+                            weight: 1,
+                            opacity: 1,
+                            fillColor: '#F0F3FA', // 填充颜色
+                            fillOpacity: 1 // 完全不透明
+                        };
+                    }
+                }).addTo(map);
+            })
+            .catch(error => {
+                console.error('Error loading world.zh.geojson:', error);
+            });
+            
+        // 加载InlandWater_data.geojson点数据
+        fetch('https://hanzzz2020.github.io/CH4_mapping/InlandWater_data.geojson') 
+            .then(response => response.json())
+            .then(data => {
+                // 创建GeoJSON图层并添加到地图
+                var inlandWaterLayer = L.geoJSON(data, {
+                    pointToLayer: function (feature, latlng) {
+                        var waterType = feature.properties['Inland Water Type'];
+                        
+                        var color = getColor(waterType);
+                        var radius = 5;
+                        return L.circleMarker(latlng, {
+                            radius: radius,
+                            fillColor: color,
+                            color: color,
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                       
+                    },
+                    onEachFeature: function (feature, layer) {
+                        // 为每个特征添加点击事件
+                        if (feature.properties) {
+                            
+                            var waterType = feature.properties['Inland Water Type'];
+                            var popupContent = `水体类型：${getChineseName(waterType)}`;
+                            layer.on('click', function(e) {
+                                if (e.target._popup) {
+                                    e.target.unbindPopup();
+                                    detailsControl.getContainer().style.display = 'none'; // 隐藏详情框
+                                } else {
+                                    e.target.bindPopup(popupContent, { closeButton: false }).openPopup(); // 去除关闭按钮
+                                    
+                                    // 显示右下角详情框
+                                    var detailsContent = `
+                                        <p>坐标：${feature.properties.Coordinates}</p>
+                                        <p>时间：${feature.properties['Temporal coverage']}</p>
+                                        <p>位置：${feature.properties.Location}</p>
+                                        <p>参考文献：${feature.properties.Citation}</p>
+                                    `;
+                                    detailsControl.setContent(detailsContent);
+                                    detailsControl.getContainer().style.display = 'block'; // 显示详情框
+                                }
+                            });
+                        }
+                    }
+                }).addTo(map);
+
+                // 确保点数据图层在面数据图层之上
+                map.addLayer(inlandWaterLayer);
+                map.removeLayer(worldLayer);
+                map.addLayer(worldLayer);
+            })
+            .catch(error => {
+                console.error('Error loading InlandWater_data.geojson:', error);
+            });
+
+        
+        // 根据水体类型返回颜色
+        function getColor(waterType) {
+            switch (waterType) {
+                case 'Pond':
+                    return `rgb(78, 204, 163)`; // 浅蓝色
+                case 'Reservoir':
+                    return `rgb(52, 152, 219)`; // 天蓝色
+                case 'Lake':
+                    return `rgb(41, 128, 185)`; // 深蓝色
+                case 'Stream':
+                    return `rgb(26, 188, 156)`; // 深海蓝
+                case 'River':
+                    return `rgb(44, 62, 80)`; // 暗蓝色
+                default:
+                    return `rgb(0, 0, 255)`; // 默认蓝色
+            }
+        }
+        // 根据水体类型返回中文名称
+        function getChineseName(type) {
+            switch (type) {
+                case 'Pond':
+                    return '池塘';
+                case 'Reservoir':
+                    return '水库';
+                case 'Lake':
+                    return '湖泊';
+                case 'Stream':
+                    return '溪流';
+                case 'River':
+                    return '河流';
+                default:
+                    return '未知类型';
+            }
+        }
+
+
+        // 创建一个自定义控件
+        var detailsControl = L.control({position: 'bottomright'});
+        detailsControl.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'details');
+            div.innerHTML = '';
+            return div;
+        };
+        detailsControl.addTo(map);
+
+        // 方法来更新控件内容
+        detailsControl.setContent = function(content) {
+            this.getContainer().innerHTML = content;
+        };
+
+    </script>
+</body>
+</html>
+    </div>
 </body>
 </html>
